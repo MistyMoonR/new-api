@@ -32,7 +32,12 @@ import dayjs from '@/lib/dayjs'
 import { formatLogQuota, formatTimestampToDate } from '@/lib/format'
 
 import type { UsageLog } from '../data/schema'
-import { formatModelName, logTokenName, parseLogOther } from '../lib/format'
+import {
+  formatModelName,
+  logTokenName,
+  parseLogOther,
+  totalInputTokens,
+} from '../lib/format'
 import {
   getLogTypeConfig,
   isDisplayableLogType,
@@ -293,7 +298,11 @@ export function CommonLogMobileCard<TData>(props: {
           <span>
             {t('Input')}{' '}
             <span className='text-foreground tabular-nums'>
-              {log.prompt_tokens.toLocaleString()}
+              {/* LOCAL-PATCH(cachetokens): unified total input (fresh+cache) */}
+              {totalInputTokens(
+                log.prompt_tokens || 0,
+                other
+              ).toLocaleString()}
             </span>
           </span>
           <span>

@@ -170,6 +170,28 @@ export function parseLogOther(other: string): LogOtherData | null {
   }
 }
 
+// LOCAL-PATCH(cachetokens): anthropic-semantic rows keep only the fresh
+// (non-cached) input in prompt_tokens — cache read/write live in logs.other
+// and are ADDITIVE. OpenAI-semantic rows already include cached tokens inside
+// prompt_tokens. Mirrors the backend aggregation CASE exactly; openai/missing
+// semantic rows must NOT add cache fields back (double counting).
+export function totalInputTokens(
+  promptTokens: number,
+  other: LogOtherData | null
+): number {
+  if (!other || other.usage_semantic !== 'anthropic') {
+    return promptTokens
+  }
+  const cacheRead = other.cache_tokens || 0
+  const cacheWrite5m = other.cache_creation_tokens_5m || 0
+  const cacheWrite1h = other.cache_creation_tokens_1h || 0
+  const hasSplit = cacheWrite5m > 0 || cacheWrite1h > 0
+  const cacheWrite = hasSplit
+    ? cacheWrite5m + cacheWrite1h
+    : other.cache_creation_tokens || 0
+  return promptTokens + cacheRead + cacheWrite
+}
+
 export function getReasoningEffortVariant(
   effort: string | undefined
 ): StatusBadgeProps['variant'] {

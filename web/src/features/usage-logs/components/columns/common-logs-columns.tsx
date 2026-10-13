@@ -65,6 +65,7 @@ import {
   logTokenName,
   renderAuditContent,
   renderLogContent,
+  totalInputTokens,
 } from '../../lib/format'
 import {
   isDisplayableLogType,
@@ -731,6 +732,11 @@ export function useCommonLogsColumns(
             return <span className='text-muted-foreground text-xs'>-</span>
           }
 
+          // LOCAL-PATCH(cachetokens): display the unified total input
+          // (fresh + cache) for anthropic rows so the cache detail line
+          // below is a true subset; OpenAI rows are unchanged.
+          const inputTokens = totalInputTokens(promptTokens, other)
+
           const cacheReadTokens = other?.cache_tokens || 0
           const cacheWrite5m = other?.cache_creation_tokens_5m || 0
           const cacheWrite1h = other?.cache_creation_tokens_1h || 0
@@ -742,7 +748,7 @@ export function useCommonLogsColumns(
           return (
             <div className='flex flex-col gap-0.5'>
               <span className='font-mono text-xs font-medium tabular-nums'>
-                {promptTokens.toLocaleString()} /{' '}
+                {inputTokens.toLocaleString()} /{' '}
                 {completionTokens.toLocaleString()}
               </span>
               {(cacheReadTokens > 0 || cacheWriteTokens > 0) && (

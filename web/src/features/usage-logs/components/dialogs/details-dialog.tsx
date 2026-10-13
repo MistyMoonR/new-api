@@ -71,6 +71,7 @@ import { AuditDetailFields } from '../../audit/components/audit-detail-fields'
 import type { UsageLog } from '../../data/schema'
 import {
   parseLogOther,
+  totalInputTokens,
   getParamOverrideActionLabel,
   parseAuditLine,
   decodeBillingExprB64,
@@ -389,7 +390,20 @@ function TokenBreakdown(props: { log: UsageLog; other: LogOtherData }) {
 
   const rows: Array<{ label: string; value: string }> = []
 
-  rows.push({ label: t('Input Tokens'), value: promptTokens.toLocaleString() })
+  // LOCAL-PATCH(cachetokens): show the unified total input (fresh + cache)
+  // for anthropic rows, with the fresh portion as a breakdown line.
+  const inputTokens = totalInputTokens(promptTokens, other)
+  rows.push({ label: t('Input Tokens'), value: inputTokens.toLocaleString() })
+  if (
+    other.usage_semantic === 'anthropic' &&
+    promptTokens !== inputTokens &&
+    promptTokens > 0
+  ) {
+    rows.push({
+      label: t('Fresh Input'),
+      value: promptTokens.toLocaleString(),
+    })
+  }
   rows.push({
     label: t('Output Tokens'),
     value: completionTokens.toLocaleString(),

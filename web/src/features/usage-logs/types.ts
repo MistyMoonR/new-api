@@ -191,6 +191,9 @@ export interface LogOtherData {
   cache_creation_tokens?: number
   cache_creation_tokens_5m?: number
   cache_creation_tokens_1h?: number
+  // LOCAL-PATCH(cachetokens): usage semantics recorded by the backend
+  // ('anthropic' = prompt_tokens is fresh-only, cache is additive).
+  usage_semantic?: string
   claude?: boolean
   model_ratio?: number
   completion_ratio?: number
