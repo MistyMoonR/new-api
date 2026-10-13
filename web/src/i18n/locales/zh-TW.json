@@ -7266,6 +7266,11 @@
     "Zhipu": "智譜",
     "Zhipu GLM": "智譜GLM",
     "Zhipu V4": "智譜 V4",
-    "Zoom": "縮放"
+    "Zoom": "縮放",
+    "Token Distribution": "Token 分佈",
+    "Cache Hit Rate": "快取命中率",
+    "Fresh Input": "未快取輸入",
+    "Token Distribution Note": "輸入 = 未快取輸入 + 快取讀 + 快取寫(Anthropic 語義自動加回快取,防重複計數)",
+    "Load failed": "載入失敗"
   }
 }

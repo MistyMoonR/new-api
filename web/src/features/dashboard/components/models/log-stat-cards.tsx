@@ -21,7 +21,10 @@ import { useTranslation } from 'react-i18next'
 
 import { IconBadge } from '@/components/ui/icon-badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { getUserQuotaDates } from '@/features/dashboard/api'
+import {
+  getTokenBreakdown,
+  getUserQuotaDates,
+} from '@/features/dashboard/api'
 import { useModelStatCardsConfig } from '@/features/dashboard/hooks/use-dashboard-config'
 import {
   buildQueryParams,
@@ -31,6 +34,7 @@ import {
 import type {
   QuotaDataItem,
   DashboardFilters,
+  TokenBreakdownItem,
 } from '@/features/dashboard/types'
 import { toIntlLocale } from '@/i18n/languages'
 import { formatCompactNumber, formatNumber, formatQuota } from '@/lib/format'
@@ -41,6 +45,34 @@ import { useAuthStore } from '@/stores/auth-store'
 interface LogStatCardsProps {
   filters?: DashboardFilters
   onDataUpdate?: (data: QuotaDataItem[], loading: boolean) => void
+}
+
+interface TokenComposition {
+  totalTokens: number
+  freshInput: number
+  cacheRead: number
+  cacheWrite: number
+  completion: number
+}
+
+function sumTokenComposition(rows: TokenBreakdownItem[]): TokenComposition {
+  return rows.reduce(
+    (acc, row) => ({
+      totalTokens:
+        acc.totalTokens + (row.total_input || 0) + (row.completion || 0),
+      freshInput: acc.freshInput + (row.fresh_input || 0),
+      cacheRead: acc.cacheRead + (row.cache_read || 0),
+      cacheWrite: acc.cacheWrite + (row.cache_write || 0),
+      completion: acc.completion + (row.completion || 0),
+    }),
+    {
+      totalTokens: 0,
+      freshInput: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+      completion: 0,
+    }
+  )
 }
 
 const MAX_INLINE_STAT_CHARS = 9
@@ -59,7 +91,7 @@ function formatStatNumber(value: number, locale: Intl.LocalesArgument) {
 }
 
 export function LogStatCards(props: LogStatCardsProps) {
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
   const statCardsConfig = useModelStatCardsConfig()
   const user = useAuthStore((state) => state.auth.user)
   const isAdmin = !!(user?.role && user.role >= 10)
@@ -68,6 +100,11 @@ export function LogStatCards(props: LogStatCardsProps) {
     totalCount: number
     totalTokens: number
   } | null>(null)
+  // LOCAL-PATCH(cachetokens): calibrated token composition from the
+  // cache-aware endpoint; null while unavailable (keeps quota_data totals).
+  const [tokenComposition, setTokenComposition] = useState<TokenComposition | null>(
+    null
+  )
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
@@ -82,6 +119,7 @@ export function LogStatCards(props: LogStatCardsProps) {
 
     setError(false)
     onDataUpdate?.([], true)
+    setTokenComposition(null)
 
     const timeRange = computeTimeRange(
       getDefaultDays(filters?.time_granularity),
@@ -90,8 +128,28 @@ export function LogStatCards(props: LogStatCardsProps) {
     )
     const timeDiff = (timeRange.end_timestamp - timeRange.start_timestamp) / 60
     setTimeRangeMinutes(timeDiff)
+    const queryParams = buildQueryParams(timeRange, filters)
 
-    void getUserQuotaDates(buildQueryParams(timeRange, filters), isAdmin)
+    // LOCAL-PATCH(cachetokens): fetch the cache-aware breakdown in parallel
+    // and swap the total-token stat to its sum (total input incl. cache +
+    // output). Admin-only endpoint: non-admin or failed requests keep the
+    // quota_data totals as fallback.
+    if (isAdmin) {
+      void getTokenBreakdown(queryParams)
+        .then((res) => {
+          if (abortController.signal.aborted) return
+          const composition = sumTokenComposition(res?.data || [])
+          if (composition.totalTokens > 0) {
+            setTokenComposition(composition)
+          }
+        })
+        .catch(() => {
+          if (abortController.signal.aborted) return
+          setTokenComposition(null)
+        })
+    }
+
+    void getUserQuotaDates(queryParams, isAdmin)
       .then((res) => {
         if (abortController.signal.aborted) return
         const data = res?.data || []
@@ -118,8 +176,21 @@ export function LogStatCards(props: LogStatCardsProps) {
   const adaptedStats = {
     rpm: stats?.totalCount ?? 0,
     quota: stats?.totalQuota ?? 0,
-    tpm: stats?.totalTokens ?? 0,
+    // LOCAL-PATCH(cachetokens): cache-aware total when available.
+    tpm: tokenComposition?.totalTokens ?? stats?.totalTokens ?? 0,
   }
+
+  const compositionTooltip = tokenComposition
+    ? [
+        `${t('Input Tokens')}: ${(
+          tokenComposition.totalTokens - tokenComposition.completion
+        ).toLocaleString()}`,
+        `${t('Fresh Input')}: ${tokenComposition.freshInput.toLocaleString()}`,
+        `${t('Cache Read')}: ${tokenComposition.cacheRead.toLocaleString()}`,
+        `${t('Cache Write')}: ${tokenComposition.cacheWrite.toLocaleString()}`,
+        `${t('Output Tokens')}: ${tokenComposition.completion.toLocaleString()}`,
+      ].join('\n')
+    : null
 
   const items = statCardsConfig.map((config) => {
     const rawValue = config.getValue(adaptedStats, timeRangeMinutes)
@@ -135,7 +206,10 @@ export function LogStatCards(props: LogStatCardsProps) {
     return {
       title: config.title,
       value: formatted.displayValue,
-      fullValue: formatted.fullValue,
+      fullValue:
+        config.key === 'tokens' && compositionTooltip
+          ? `${formatted.fullValue}\n${compositionTooltip}`
+          : formatted.fullValue,
       desc: config.description,
       icon: config.icon,
       iconTone: config.iconTone,

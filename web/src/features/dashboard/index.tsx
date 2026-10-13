@@ -101,6 +101,13 @@ const LazyPerformanceOverview = lazy(() =>
   }))
 )
 
+// LOCAL-PATCH(cachetokens): fifth card — token distribution with cache segments.
+const LazyTokenBreakdownCard = lazy(() =>
+  import('./components/models/token-breakdown-card').then((m) => ({
+    default: m.TokenBreakdownCard,
+  }))
+)
+
 const LazyUserCharts = lazy(() =>
   import('./components/users/user-charts').then((m) => ({
     default: m.UserCharts,
@@ -387,6 +394,12 @@ export function Dashboard() {
                       modelFilters.time_granularity || DEFAULT_TIME_GRANULARITY
                     }
                   />
+                </Suspense>
+              </FadeIn>
+              {/* LOCAL-PATCH(cachetokens): token distribution card, fifth slot */}
+              <FadeIn delay={0.2}>
+                <Suspense fallback={<ModelChartsFallback />}>
+                  <LazyTokenBreakdownCard filters={modelFilters} />
                 </Suspense>
               </FadeIn>
             </>

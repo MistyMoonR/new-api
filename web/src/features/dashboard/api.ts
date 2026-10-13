@@ -21,6 +21,7 @@ import { api } from '@/lib/api'
 import type {
   FlowQuotaDataItem,
   QuotaDataItem,
+  TokenBreakdownItem,
   UptimeGroupResult,
 } from './types'
 
@@ -46,6 +47,20 @@ export async function getUserQuotaDates(
   const endpoint = isAdmin ? '/api/data' : '/api/data/self'
   const res = await api.get<{ success: boolean; data: QuotaDataItem[] }>(
     endpoint,
+    { params }
+  )
+  return res.data
+}
+
+// LOCAL-PATCH(cachetokens): cache-aware token breakdown (admin only)
+export async function getTokenBreakdown(params: {
+  start_timestamp: number
+  end_timestamp: number
+  model_name?: string
+  username?: string
+}) {
+  const res = await api.get<{ success: boolean; data: TokenBreakdownItem[] }>(
+    '/api/data/token-breakdown',
     { params }
   )
   return res.data

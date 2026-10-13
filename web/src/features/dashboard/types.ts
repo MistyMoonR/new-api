@@ -33,6 +33,19 @@ export interface QuotaDataItem {
   quota?: number
 }
 
+// LOCAL-PATCH(cachetokens): cache-aware token breakdown from /api/data/token-breakdown.
+export interface TokenBreakdownItem {
+  bucket: number
+  model_name: string
+  total_input: number
+  fresh_input: number
+  cache_read: number
+  cache_write: number
+  completion: number
+  quota: number
+  count: number
+}
+
 export interface FlowQuotaDataItem {
   user_id?: number
   username?: string

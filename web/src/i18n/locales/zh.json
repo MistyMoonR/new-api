@@ -7266,6 +7266,11 @@
     "Zhipu": "智谱",
     "Zhipu GLM": "智谱GLM",
     "Zhipu V4": "智谱 V4",
-    "Zoom": "缩放"
+    "Zoom": "缩放",
+    "Token Distribution": "Token 分布",
+    "Cache Hit Rate": "缓存命中率",
+    "Fresh Input": "未缓存输入",
+    "Token Distribution Note": "输入 = 未缓存输入 + 缓存读 + 缓存写(Anthropic 语义自动加回缓存,防重复计数)",
+    "Load failed": "加载失败"
   }
 }

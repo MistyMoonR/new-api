@@ -7266,6 +7266,11 @@
     "Zhipu": "Zhipu",
     "Zhipu GLM": "Zhipu GLM",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom"
+    "Zoom": "Zoom",
+    "Token Distribution": "Token Distribution",
+    "Cache Hit Rate": "Cache Hit Rate",
+    "Fresh Input": "Fresh Input",
+    "Token Distribution Note": "Input = fresh input + cache read + cache write (cache added back for Anthropic semantics, no double counting)",
+    "Load failed": "Load failed"
   }
 }
