@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -681,7 +682,15 @@ func SumUsedQuota(logType int, startTimestamp int64, endTimestamp int64, modelNa
 	tx := LOG_DB.Table("logs").Select("COALESCE(sum(quota), 0) quota")
 
 	// 为rpm和tpm创建单独的查询
-	rpmTpmQuery := LOG_DB.Table("logs").Select("count(*) rpm, COALESCE(sum(prompt_tokens), 0) + COALESCE(sum(completion_tokens), 0) tpm")
+	// LOCAL-PATCH(cachetokens): tpm uses the cache-aware input on SQLite so
+	// anthropic traffic (fresh-only prompt_tokens) is not under-reported.
+	// OpenAI-semantic rows are untouched — prompt_tokens already includes
+	// cached tokens there, adding logs.other fields would double-count.
+	rpmTpmSelect := "count(*) rpm, COALESCE(sum(prompt_tokens), 0) + COALESCE(sum(completion_tokens), 0) tpm"
+	if tokenStatsUsingSQLite() {
+		rpmTpmSelect = fmt.Sprintf("count(*) rpm, COALESCE(sum(prompt_tokens + %s), 0) + COALESCE(sum(completion_tokens), 0) tpm", cacheAddExpr())
+	}
+	rpmTpmQuery := LOG_DB.Table("logs").Select(rpmTpmSelect)
 
 	if tx, err = applyExplicitLogTextFilter(tx, "username", username); err != nil {
 		return stat, err
