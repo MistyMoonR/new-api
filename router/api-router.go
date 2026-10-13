@@ -353,6 +353,8 @@ func SetApiRouter(router *gin.Engine) {
 		dataRoute.GET("/self", middleware.UserAuth(), controller.GetUserQuotaDates)
 		dataRoute.GET("/flow", middleware.AdminAuth(), controller.GetAllFlowQuotaDates)
 		dataRoute.GET("/flow/self", middleware.UserAuth(), controller.GetUserFlowQuotaDates)
+		// LOCAL-PATCH(cachetokens): cache-aware token breakdown for the dashboard.
+		dataRoute.GET("/token-breakdown", middleware.AdminAuth(), controller.GetTokenBreakdown)
 
 		logRoute.Use(middleware.CORS(), middleware.CriticalRateLimit())
 		{
